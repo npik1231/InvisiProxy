@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read # This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -23,11 +23,16 @@ jobs:
         with:
           node-version: '26.x'
 
-      - name: npm install, build, and test
+      - name: Enable Corepack and install pnpm
         run: |
-          npm install
-          npm run build --if-present
-          npm run test --if-present
+          corepack enable
+          npm install --global pnpm
+
+      - name: Install dependencies and prepare app
+        run: |
+          pnpm run fresh-install
+          pnpm run fetch-adblock
+          pnpm start
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -39,15 +44,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: node-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -55,11 +60,12 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_62C38A031CDD4BCC8D8FA6AD1EFE9A9A }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A38F733718F943E4894F7278A9C60105 }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'Invisiixl'
           slot-name: 'Production'
           package: .
+
           
